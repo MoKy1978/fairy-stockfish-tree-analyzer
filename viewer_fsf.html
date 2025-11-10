@@ -1,0 +1,1458 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Variant Tree Explorer</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, shrink-to-fit=no" />
+  <link rel="stylesheet" href="https://bootswatch.com/4/darkly/bootstrap.min.css" crossorigin="anonymous" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.2/css/all.min.css" />
+  
+  <style>
+    body {
+      background-color: #222;
+      color: #fff;
+      padding: 10px;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+    
+    /* Main container */
+    .main-container {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      margin-bottom: 40px;
+    }
+    
+    /* Desktop layout */
+    @media (min-width: 992px) {
+      .main-container {
+        flex-direction: row;
+        align-items: flex-start;
+      }
+      
+      .board-section {
+        display: flex;
+        flex-direction: column;
+      }
+      
+      .moves-section {
+        width: 400px;
+        display: flex;
+        flex-direction: column;
+        height: calc(600px + 62px);
+      }
+      
+      .moves-container {
+        flex: 1;
+        min-height: 0;
+      }
+      
+      .moves-controls {
+        margin-top: 10px;
+        margin-bottom: 0;
+        height: 52px;
+        align-items: center;
+      }
+    }
+    
+    /* Mobile layout */
+    @media (max-width: 991px) {
+      .main-container {
+        flex-direction: column;
+        align-items: center;
+      }
+      
+      .moves-section {
+        width: 100%;
+        max-width: 600px;
+        height: auto;
+        max-height: 500px;
+      }
+      
+      /* Mobile pockets */
+      .board-area {
+        gap: 3px;
+      }
+      
+      .pocket {
+        width: 45px;
+        height: 70vw;
+        max-height: 70vw;
+        padding: 0;
+        gap: 3px;
+      }
+      
+      .pocket-piece {
+        width: 42px;
+        height: 42px;
+      }
+      
+      .pocket-piece svg {
+        width: 38px;
+        height: 38px;
+      }
+      
+      #board {
+        max-width: 85vw;
+        max-height: 85vw;
+      }
+    }
+    
+    .board-section {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      flex-shrink: 0;
+    }
+    
+    /* Board area */
+    .board-area {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+    }
+    
+    .board-container {
+      flex-shrink: 0;
+    }
+    
+    #board {
+      width: 600px;
+      height: 600px;
+      max-width: 95vw;
+      max-height: 95vw;
+      background: transparent;
+    }
+    
+    /* Flip button */
+    .flip-container {
+      width: 600px;
+      max-width: 95vw;
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 10px;
+    }
+    
+    /* Pocket styles */
+    .pocket {
+      width: 60px;
+      height: 600px;
+      max-height: 95vw;
+      background: transparent;
+      border: none;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      padding: 0;
+      gap: 4px;
+      flex-shrink: 0;
+    }
+    
+    #whitePocket {
+      flex-direction: column-reverse;
+    }
+    
+    .pocket-piece {
+      width: 60px;
+      height: 60px;
+      position: relative;
+      background: #f0d9b5;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: opacity 0.3s;
+    }
+    
+    .pocket-piece.empty {
+      opacity: 0.3;
+    }
+    
+    .pocket-piece svg {
+      width: 60px;
+      height: 60px;
+    }
+    
+    .pocket-count {
+      position: absolute;
+      bottom: 2px;
+      right: 2px;
+      background: rgba(0, 0, 0, 0.8);
+      color: #fff;
+      font-size: 15px;
+      font-weight: bold;
+      padding: 2px 6px;
+      border-radius: 3px;
+      min-width: 20px;
+      text-align: center;
+    }
+    
+    /* Analysis Panel */
+    .analysis-panel {
+      background: #303030;
+      border-radius: 4px;
+      margin-top: 20px;
+      overflow: hidden;
+    }
+    
+    .analysis-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 15px;
+      background: #252525;
+      border-bottom: 1px solid #444;
+    }
+    
+    .analysis-title {
+      font-weight: bold;
+      font-size: 18px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    
+    .analysis-controls {
+      display: flex;
+      gap: 8px;
+    }
+    
+    .analysis-body {
+      padding: 15px;
+    }
+    
+    .analysis-status {
+      padding: 10px;
+      text-align: center;
+      color: #888;
+      font-style: italic;
+    }
+    
+    .analysis-line {
+      padding: 10px;
+      margin-bottom: 8px;
+      background: #252525;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    
+    .analysis-line:hover {
+      background: #2a2a2a;
+    }
+    
+    .analysis-line.best {
+      border-left: 3px solid #4CAF50;
+      padding-left: 12px;
+    }
+    
+    .line-score {
+      font-size: 20px;
+      font-weight: bold;
+      margin-bottom: 5px;
+    }
+    
+    .line-score.positive {
+      color: #4CAF50;
+    }
+    
+    .line-score.negative {
+      color: #f44336;
+    }
+    
+    .line-score.mate {
+      color: #2196F3;
+    }
+    
+    .line-moves {
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+      color: #bbb;
+      word-wrap: break-word;
+    }
+    
+    .line-info {
+      font-size: 12px;
+      color: #888;
+      margin-top: 5px;
+    }
+    
+    .engine-spinner {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      border: 2px solid #444;
+      border-top-color: #4CAF50;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    
+    .nav-controls {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 60px;
+      margin-top: 10px;
+      gap: 10px;
+    }
+    
+    .nav-controls .btn,
+    .moves-controls .btn {
+      height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 48px;
+    }
+    
+    .nav-controls .btn-group .btn {
+      border-radius: 0;
+    }
+    
+    .nav-controls .btn-group .btn:first-child {
+      border-radius: 0.25rem 0 0 0.25rem;
+    }
+    
+    .nav-controls .btn-group .btn:last-child {
+      border-radius: 0 0.25rem 0.25rem 0;
+    }
+    
+    /* Load buttons */
+    .moves-controls {
+      display: flex;
+      gap: 10px;
+      margin-top: 10px;
+      justify-content: center;
+      flex-shrink: 0;
+      height: 60px;
+      align-items: center;
+    }
+    
+    .moves-section {
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .info-panel {
+      background: #303030;
+      padding: 10px 15px;
+      border-radius: 4px;
+      margin-bottom: 10px;
+      flex-shrink: 0;
+    }
+    
+    .info-panel .info-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 18px;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    
+    .moves-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background: #303030;
+      border-radius: 4px;
+      overflow: hidden;
+      min-height: 0;
+    }
+    
+    .moves-header {
+      display: flex;
+      background: #252525;
+      padding: 10px 15px;
+      font-weight: bold;
+      font-size: 18px;
+      border-bottom: 1px solid #444;
+      flex-shrink: 0;
+    }
+    
+    .moves-header > div {
+      flex: 1;
+    }
+    
+    .moves-header .col-move { flex: 0 0 80px; }
+    .moves-header .col-score { flex: 0 0 80px; text-align: right; }
+    .moves-header .col-positions { flex: 1; text-align: right; }
+    
+    .moves-list {
+      flex: 1;
+      overflow-y: auto;
+      overflow-x: hidden;
+      scrollbar-width: thin;
+      scrollbar-color: #444 #303030;
+    }
+    
+    .moves-list::-webkit-scrollbar {
+      width: 8px;
+    }
+    
+    .moves-list::-webkit-scrollbar-track {
+      background: #303030;
+    }
+    
+    .moves-list::-webkit-scrollbar-thumb {
+      background: #444;
+      border-radius: 4px;
+    }
+    
+    .move-row {
+      display: flex;
+      padding: 12px 15px;
+      cursor: pointer;
+      transition: background 0.2s;
+      font-size: 18px;
+      border-bottom: 1px solid #3a3a3a;
+      min-height: 44px;
+    }
+    
+    .move-row:hover {
+      background: #375a7f;
+    }
+    
+    .move-row.best {
+      background: rgba(76, 175, 80, 0.15);
+    }
+    
+    .move-row .col-move { flex: 0 0 80px; font-family: monospace; }
+    .move-row .col-score { flex: 0 0 80px; text-align: right; font-family: monospace; }
+    .move-row .col-positions { flex: 1; text-align: right; color: #888; }
+    
+    .move-row.disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    
+    .empty-message {
+      text-align: center;
+      padding: 50px 20px;
+      color: #666;
+      font-size: 16px;
+    }
+    
+    .empty-message i {
+      font-size: 48px;
+      margin-bottom: 15px;
+      display: block;
+    }
+    
+    /* Board text elements */
+    text { fill: #999; }
+    .engine-panel { background: #1a4d2e; padding: 10px 15px; border-radius: 4px; margin-bottom: 10px; border-left: 4px solid #4ade80; }
+    .engine-panel.analyzing { background: #4a4a1a; border-left-color: #fbbf24; }
+    .engine-row { display: flex; justify-content: space-between; font-size: 14px; margin: 3px 0; }
+    .engine-eval { font-size: 20px; font-weight: bold; color: #4ade80; }
+  </style>
+</head>
+<body>
+
+<input type="file" id="fileInput" accept=".jsonl" style="display: none;">
+
+<div class="main-container">
+  <div class="board-section">
+    <div class="board-area">
+      <div id="whitePocket" class="pocket"></div>
+      
+      <div class="board-container">
+        <svg id="board" version="1.1" viewBox="0 0 600 600" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+      <defs>
+        <g class="white pawn" id="white-pawn">
+          <path d="M22 9c-2.21 0-4 1.79-4 4 0 .89.29 1.71.78 2.38-1.95 1.12-3.28 3.21-3.28 5.62 0 2.03.94 3.84 2.41 5.03-3 1.06-7.41 5.55-7.41 13.47h23c0-7.92-4.41-12.41-7.41-13.47 1.47-1.19 2.41-3 2.41-5.03 0-2.41-1.33-4.5-3.28-5.62.49-.67.78-1.49.78-2.38 0-2.21-1.79-4-4-4z" fill="#fff" stroke="#000" stroke-linecap="round" stroke-width="1.5" />
+        </g>
+        <g class="white knight" fill="none" fill-rule="evenodd" id="white-knight" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5">
+          <path d="M 22,10 C 32.5,11 38.5,18 38,39 L 15,39 C 15,30 25,32.5 23,18" style="fill:#ffffff; stroke:#000000;" />
+          <path d="M 24,18 C 24.38,20.91 18.45,25.37 16,27 C 13,29 13.18,31.34 11,31 C 9.958,30.06 12.41,27.96 11,28 C 10,28 11.19,29.23 10,30 C 9,30 5.997,31 6,26 C 6,24 12,14 12,14 C 12,14 13.89,12.1 14,10.5 C 13.27,9.506 13.5,8.5 13.5,7.5 C 14.5,6.5 16.5,10 16.5,10 L 18.5,10 C 18.5,10 19.28,8.008 21,7 C 22,7 22,10 22,10" style="fill:#ffffff; stroke:#000000;" />
+          <path d="M 9.5 25.5 A 0.5 0.5 0 1 1 8.5,25.5 A 0.5 0.5 0 1 1 9.5 25.5 z" style="fill:#000000; stroke:#000000;" />
+          <path d="M 15 15.5 A 0.5 1.5 0 1 1 14,15.5 A 0.5 1.5 0 1 1 15 15.5 z" style="fill:#000000; stroke:#000000;" transform="matrix(0.866,0.5,-0.5,0.866,9.693,-5.173)" />
+        </g>
+        <g class="white bishop" fill="none" fill-rule="evenodd" id="white-bishop" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5">
+          <g fill="#fff" stroke-linecap="butt">
+            <path d="M9 36c3.39-.97 10.11.43 13.5-2 3.39 2.43 10.11 1.03 13.5 2 0 0 1.65.54 3 2-.68.97-1.65.99-3 .5-3.39-.97-10.11.46-13.5-1-3.39 1.46-10.11.03-13.5 1-1.354.49-2.323.47-3-.5 1.354-1.94 3-2 3-2zM15 32c2.5 2.5 12.5 2.5 15 0 .5-1.5 0-2 0-2 0-2.5-2.5-4-2.5-4 5.5-1.5 6-11.5-5-15.5-11 4-10.5 14-5 15.5 0 0-2.5 1.5-2.5 4 0 0-.5.5 0 2zM25 8a2.5 2.5 0 1 1-5 0 2.5 2.5 0 1 1 5 0z" />
+          </g>
+          <path d="M17.5 26h10M15 30h15m-7.5-14.5v5M20 18h5" stroke-linejoin="miter" />
+        </g>
+        <g class="white rook" fill="#fff" fill-rule="evenodd" id="white-rook" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5">
+          <path d="M9 39h27v-3H9v3zM12 36v-4h21v4H12zM11 14V9h4v2h5V9h5v2h5V9h4v5" stroke-linecap="butt" />
+          <path d="M34 14l-3 3H14l-3-3" />
+          <path d="M31 17v12.5H14V17" stroke-linecap="butt" stroke-linejoin="miter" />
+          <path d="M31 29.5l1.5 2.5h-20l1.5-2.5" />
+          <path d="M11 14h23" fill="none" stroke-linejoin="miter" />
+        </g>
+        <g class="white queen" fill="#fff" fill-rule="evenodd" id="white-queen" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5">
+          <path d="M8 12a2 2 0 1 1-4 0 2 2 0 1 1 4 0zM24.5 7.5a2 2 0 1 1-4 0 2 2 0 1 1 4 0zM41 12a2 2 0 1 1-4 0 2 2 0 1 1 4 0zM16 8.5a2 2 0 1 1-4 0 2 2 0 1 1 4 0zM33 9a2 2 0 1 1-4 0 2 2 0 1 1 4 0z" />
+          <path d="M9 26c8.5-1.5 21-1.5 27 0l2-12-7 11V11l-5.5 13.5-3-15-3 15-5.5-14V25L7 14l2 12zM9 26c0 2 1.5 2 2.5 4 1 1.5 1 1 .5 3.5-1.5 1-1.5 2.5-1.5 2.5-1.5 1.5.5 2.5.5 2.5 6.5 1 16.5 1 23 0 0 0 1.5-1 0-2.5 0 0 .5-1.5-1-2.5-.5-2.5-.5-2 .5-3.5 1-2 2.5-2 2.5-4-8.5-1.5-18.5-1.5-27 0z" stroke-linecap="butt" />
+          <path d="M11.5 30c3.5-1 18.5-1 22 0M12 33.5c6-1 15-1 21 0" fill="none" />
+        </g>
+        <g class="white king" fill="none" fill-rule="evenodd" id="white-king" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5">
+          <path d="M22.5 11.63V6M20 8h5" stroke-linejoin="miter" />
+          <path d="M22.5 25s4.5-7.5 3-10.5c0 0-1-2.5-3-2.5s-3 2.5-3 2.5c-1.5 3 3 10.5 3 10.5" fill="#fff" stroke-linecap="butt" stroke-linejoin="miter" />
+          <path d="M11.5 37c5.5 3.5 15.5 3.5 21 0v-7s9-4.5 6-10.5c-4-6.5-13.5-3.5-16 4V27v-3.5c-3.5-7.5-13-10.5-16-4-3 6 5 10 5 10V37z" fill="#fff" />
+          <path d="M11.5 30c5.5-3 15.5-3 21 0m-21 3.5c5.5-3 15.5-3 21 0m-21 3.5c5.5-3 15.5-3 21 0" />
+        </g>
+        
+        <g class="black pawn" id="black-pawn">
+          <path d="M22 9c-2.21 0-4 1.79-4 4 0 .89.29 1.71.78 2.38-1.95 1.12-3.28 3.21-3.28 5.62 0 2.03.94 3.84 2.41 5.03-3 1.06-7.41 5.55-7.41 13.47h23c0-7.92-4.41-12.41-7.41-13.47 1.47-1.19 2.41-3 2.41-5.03 0-2.41-1.33-4.5-3.28-5.62.49-.67.78-1.49.78-2.38 0-2.21-1.79-4-4-4z" stroke="#000" stroke-linecap="round" stroke-width="1.5" />
+        </g>
+        <g class="black knight" fill="none" fill-rule="evenodd" id="black-knight" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5">
+          <path d="M 22,10 C 32.5,11 38.5,18 38,39 L 15,39 C 15,30 25,32.5 23,18" style="fill:#000000; stroke:#000000;" />
+          <path d="M 24,18 C 24.38,20.91 18.45,25.37 16,27 C 13,29 13.18,31.34 11,31 C 9.958,30.06 12.41,27.96 11,28 C 10,28 11.19,29.23 10,30 C 9,30 5.997,31 6,26 C 6,24 12,14 12,14 C 12,14 13.89,12.1 14,10.5 C 13.27,9.506 13.5,8.5 13.5,7.5 C 14.5,6.5 16.5,10 16.5,10 L 18.5,10 C 18.5,10 19.28,8.008 21,7 C 22,7 22,10 22,10" style="fill:#000000; stroke:#000000;" />
+          <path d="M 9.5 25.5 A 0.5 0.5 0 1 1 8.5,25.5 A 0.5 0.5 0 1 1 9.5 25.5 z" style="fill:#ececec; stroke:#ececec;" />
+          <path d="M 15 15.5 A 0.5 1.5 0 1 1 14,15.5 A 0.5 1.5 0 1 1 15 15.5 z" style="fill:#ececec; stroke:#ececec;" transform="matrix(0.866,0.5,-0.5,0.866,9.693,-5.173)" />
+        </g>
+        <g class="black bishop" fill="none" fill-rule="evenodd" id="black-bishop" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5">
+          <path d="M9 36c3.39-.97 10.11.43 13.5-2 3.39 2.43 10.11 1.03 13.5 2 0 0 1.65.54 3 2-.68.97-1.65.99-3 .5-3.39-.97-10.11.46-13.5-1-3.39 1.46-10.11.03-13.5 1-1.354.49-2.323.47-3-.5 1.354-1.94 3-2 3-2zm6-4c2.5 2.5 12.5 2.5 15 0 .5-1.5 0-2 0-2 0-2.5-2.5-4-2.5-4 5.5-1.5 6-11.5-5-15.5-11 4-10.5 14-5 15.5 0 0-2.5 1.5-2.5 4 0 0-.5.5 0 2zM25 8a2.5 2.5 0 1 1-5 0 2.5 2.5 0 1 1 5 0z" fill="#000" stroke-linecap="butt" />
+          <path d="M17.5 26h10M15 30h15m-7.5-14.5v5M20 18h5" stroke="#fff" stroke-linejoin="miter" />
+        </g>
+        <g class="black rook" fill="#000" fill-rule="evenodd" id="black-rook" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5">
+          <path d="M9 39h27v-3H9v3zM12.5 32l1.5-2.5h17l1.5 2.5h-20zM12 36v-4h21v4H12z" stroke-linecap="butt" />
+          <path d="M14 29.5v-13h17v13H14z" stroke-linecap="butt" stroke-linejoin="miter" />
+          <path d="M14 16.5L11 14h23l-3 2.5H14zM11 14V9h4v2h5V9h5v2h5V9h4v5H11z" stroke-linecap="butt" />
+          <path d="M12 35.5h21M13 31.5h19M14 29.5h17M14 16.5h17M11 14h23" fill="none" stroke="#fff" stroke-linejoin="miter" stroke-width="1" />
+        </g>
+        <g class="black queen" fill="#000" fill-rule="evenodd" id="black-queen" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5">
+          <g fill="#000" stroke="none">
+            <circle cx="6" cy="12" r="2.75" />
+            <circle cx="14" cy="9" r="2.75" />
+            <circle cx="22.5" cy="8" r="2.75" />
+            <circle cx="31" cy="9" r="2.75" />
+            <circle cx="39" cy="12" r="2.75" />
+          </g>
+          <path d="M9 26c8.5-1.5 21-1.5 27 0l2.5-12.5L31 25l-.3-14.1-5.2 13.6-3-14.5-3 14.5-5.2-13.6L14 25 6.5 13.5 9 26zM9 26c0 2 1.5 2 2.5 4 1 1.5 1 1 .5 3.5-1.5 1-1.5 2.5-1.5 2.5-1.5 1.5.5 2.5.5 2.5 6.5 1 16.5 1 23 0 0 0 1.5-1 0-2.5 0 0 .5-1.5-1-2.5-.5-2.5-.5-2 .5-3.5 1-2 2.5-2 2.5-4-8.5-1.5-18.5-1.5-27 0z" stroke-linecap="butt" />
+          <path d="M11 38.5a35 35 1 0 0 23 0" fill="none" stroke-linecap="butt" />
+          <path d="M11 29a35 35 1 0 1 23 0M12.5 31.5h20M11.5 34.5a35 35 1 0 0 22 0M10.5 37.5a35 35 1 0 0 24 0" fill="none" stroke="#fff" />
+        </g>
+        <g class="black king" fill="none" fill-rule="evenodd" id="black-king" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5">
+          <path d="M22.5 11.63V6" stroke-linejoin="miter" />
+          <path d="M22.5 25s4.5-7.5 3-10.5c0 0-1-2.5-3-2.5s-3 2.5-3 2.5c-1.5 3 3 10.5 3 10.5" fill="#000" stroke-linecap="butt" stroke-linejoin="miter" />
+          <path d="M11.5 37c5.5 3.5 15.5 3.5 21 0v-7s9-4.5 6-10.5c-4-6.5-13.5-3.5-16 4V27v-3.5c-3.5-7.5-13-10.5-16-4-3 6 5 10 5 10V37z" fill="#000" />
+          <path d="M20 8h5" stroke-linejoin="miter" />
+          <path d="M32 29.5s8.5-4 6.03-9.65C34.15 14 25 18 22.5 24.5l.01 2.1-.01-2.1C20 18 9.906 14 6.997 19.85c-2.497 5.65 4.853 9 4.853 9M11.5 30c5.5-3 15.5-3 21 0m-21 3.5c5.5-3 15.5-3 21 0m-21 3.5c5.5-3 15.5-3 21 0" stroke="#fff" />
+        </g>
+      </defs>
+    </svg>
+      </div>
+      
+      <div id="blackPocket" class="pocket"></div>
+    </div>
+    
+    <div class="nav-controls">
+      <div class="btn-group">
+        <button class="btn btn-secondary" id="btnStart" title="Go to start">
+          <i class="fas fa-angle-double-left" style="font-size:23px"></i>
+        </button>
+        <button class="btn btn-secondary" id="btnBack" title="Move back">
+          <i class="fas fa-angle-left" style="font-size:23px"></i>
+        </button>
+        <button class="btn btn-secondary" id="btnForward" title="Move forward">
+          <i class="fas fa-angle-right" style="font-size:23px"></i>
+        </button>
+        <button class="btn btn-secondary" id="btnEnd" title="Go to end">
+          <i class="fas fa-angle-double-right" style="font-size:23px"></i>
+        </button>
+      </div>
+      <button class="btn btn-secondary ml-3" id="flipBoard" title="Flip board">
+        <i class="fas fa-sync-alt" style="font-size:20px"></i>
+      </button>
+    </div>
+  </div>
+  
+  <div class="moves-section">
+    <div class="info-panel">
+      <div class="info-row">
+        <div><strong>Variant:</strong> <span id="nodeVariant"></span></div>
+      </div>
+      <div class="info-row">
+        <div style="word-break: break-all;"><strong>FEN:</strong> <span id="nodeFen"></span></div>
+      </div>
+      <div class="info-row">
+        <div><strong>ID:</strong> <span id="nodeId"></span></div>
+      </div>
+    </div>
+    
+    <div class="analysis-panel">
+      <div class="analysis-header">
+        <div class="analysis-title">
+          <i class="fas fa-brain"></i>
+          Engine Analysis
+          <span id="analysisSpinner" class="engine-spinner" style="display:none;"></span>
+        </div>
+        <div class="analysis-controls">
+          <button class="btn btn-sm btn-success" id="analyzeBtn" title="Analyze position">
+            <i class="fas fa-play"></i>
+          </button>
+          <button class="btn btn-sm btn-danger" id="stopAnalysisBtn" title="Stop analysis" style="display:none;">
+            <i class="fas fa-stop"></i>
+          </button>
+          <button class="btn btn-sm btn-secondary" id="settingsBtn" title="Settings">
+            <i class="fas fa-cog"></i>
+          </button>
+        </div>
+      </div>
+      <div class="analysis-body" id="analysisBody">
+        <div class="analysis-status" id="analysisStatus">
+          <i class="fas fa-info-circle"></i> Ready - Click Analyze to start
+        </div>
+      </div>
+    </div>
+    
+    <div class="moves-container">
+      <div class="moves-header">
+        <div class="col-move">Move</div>
+        <div class="col-score">Score</div>
+        <div class="col-positions">Credit</div>
+      </div>
+      <div class="moves-list" id="movesList">
+        <div class="empty-message">
+          <i class="fas fa-chess"></i>
+          <div>Load a JSONL tree file to explore</div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="moves-controls">
+      <button class="btn btn-primary" id="loadFile">
+        <i class="fas fa-upload"></i> Load JSONL
+      </button>
+      <button class="btn btn-secondary" id="reloadBtn">
+        <i class="fas fa-redo"></i> Reload
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+const SVG_NS = 'http://www.w3.org/2000/svg';
+
+const PIECE_MAP = {
+  'K': 'white-king', 'Q': 'white-queen', 'R': 'white-rook',
+  'B': 'white-bishop', 'N': 'white-knight', 'P': 'white-pawn',
+  'k': 'black-king', 'q': 'black-queen', 'r': 'black-rook',
+  'b': 'black-bishop', 'n': 'black-knight', 'p': 'black-pawn'
+};
+
+const BOARD_CONFIGS = {
+  'standard': { ranks: 8, files: 8 },
+  'antichess': { ranks: 8, files: 8 },
+  'atomic': { ranks: 8, files: 8 },
+  'crazyhouse': { ranks: 8, files: 8, hasPockets: true },
+  'horde': { ranks: 8, files: 8 },
+  'racingkings': { ranks: 8, files: 8 },
+  '3check': { ranks: 8, files: 8 },
+  'tinyhouse': { ranks: 4, files: 4, hasPockets: true }
+};
+
+class TreeViewer {
+  constructor() {
+    this.positions = {};
+    this.currentId = 0;
+    this.history = [];
+    this.variant = 'standard';
+    this.boardConfig = BOARD_CONFIGS['standard'];
+    this.flipped = false;
+    this.analyzing = false;
+    this.autoAnalyze = false;
+    
+    this.initBoard();
+    this.bindEvents();
+  }
+  
+  onEngineReady() {
+    // Called by UCI engine when it's initialized
+    console.log('Engine ready - setting variant to', this.variant);
+    window.uciEngine.setVariant(this.variant);
+    
+    const status = document.getElementById('analysisStatus');
+    status.innerHTML = '<i class="fas fa-check-circle"></i> Engine ready - Click Analyze to start';
+  }
+  
+  async analyzePosition(fen) {
+    if (!window.uciEngine || !window.uciEngine.ready) {
+      console.warn('Engine not ready yet');
+      return;
+    }
+    
+    if (this.analyzing) {
+      console.log('Already analyzing, skipping...');
+      return;
+    }
+    
+    this.analyzing = true;
+    
+    const spinner = document.getElementById('analysisSpinner');
+    const analyzeBtn = document.getElementById('analyzeBtn');
+    const stopBtn = document.getElementById('stopAnalysisBtn');
+    const statusEl = document.getElementById('analysisStatus');
+    const bodyEl = document.getElementById('analysisBody');
+    
+    spinner.style.display = 'inline-block';
+    analyzeBtn.style.display = 'none';
+    stopBtn.style.display = 'inline-block';
+    statusEl.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Analyzing position...';
+    
+    try {
+      const results = await window.uciEngine.analyzePosition(fen, 5000);
+      
+      if (!this.analyzing) {
+        // Analysis was stopped
+        return;
+      }
+      
+      // Display results
+      bodyEl.innerHTML = '';
+      
+      if (results.lines && results.lines.length > 0) {
+        results.lines.forEach((line, index) => {
+          const lineDiv = document.createElement('div');
+          lineDiv.className = 'analysis-line';
+          if (index === 0) lineDiv.classList.add('best');
+          
+          // Score
+          const scoreDiv = document.createElement('div');
+          scoreDiv.className = 'line-score';
+          
+          if (line.scoreType === 'mate') {
+            scoreDiv.className += ' mate';
+            const mateIn = line.score > 0 ? `M${line.score}` : `M${Math.abs(line.score)}`;
+            scoreDiv.textContent = mateIn;
+          } else {
+            const cp = line.score || 0;
+            scoreDiv.className += cp > 0 ? ' positive' : ' negative';
+            scoreDiv.textContent = (cp / 100).toFixed(2);
+          }
+          
+          // Moves
+          const movesDiv = document.createElement('div');
+          movesDiv.className = 'line-moves';
+          movesDiv.textContent = line.pv.slice(0, 8).join(' ');
+          
+          // Info
+          const infoDiv = document.createElement('div');
+          infoDiv.className = 'line-info';
+          infoDiv.textContent = `Depth ${line.depth} • ${this.formatNodes(line.nodes)} nodes`;
+          
+          lineDiv.appendChild(scoreDiv);
+          lineDiv.appendChild(movesDiv);
+          lineDiv.appendChild(infoDiv);
+          
+          bodyEl.appendChild(lineDiv);
+        });
+      } else {
+        statusEl.innerHTML = '<i class="fas fa-exclamation-circle"></i> No analysis results';
+      }
+      
+    } catch (error) {
+      console.error('Analysis error:', error);
+      bodyEl.innerHTML = `<div class="analysis-status"><i class="fas fa-exclamation-triangle"></i> Error: ${error.message}</div>`;
+    } finally {
+      this.analyzing = false;
+      spinner.style.display = 'none';
+      analyzeBtn.style.display = 'inline-block';
+      stopBtn.style.display = 'none';
+      
+      if (results && results.lines && results.lines.length > 0) {
+        statusEl.innerHTML = `<i class="fas fa-check-circle"></i> Analysis complete (depth ${results.depth})`;
+      }
+    }
+  }
+  
+  formatNodes(nodes) {
+    if (nodes >= 1000000) {
+      return (nodes / 1000000).toFixed(1) + 'M';
+    } else if (nodes >= 1000) {
+      return (nodes / 1000).toFixed(1) + 'K';
+    }
+    return nodes.toString();
+  }
+  
+  stopAnalysis() {
+    if (this.analyzing) {
+      window.uciEngine.stopAnalysis();
+      this.analyzing = false;
+      
+      const spinner = document.getElementById('analysisSpinner');
+      const analyzeBtn = document.getElementById('analyzeBtn');
+      const stopBtn = document.getElementById('stopAnalysisBtn');
+      const statusEl = document.getElementById('analysisStatus');
+      
+      spinner.style.display = 'none';
+      analyzeBtn.style.display = 'inline-block';
+      stopBtn.style.display = 'none';
+      statusEl.innerHTML = '<i class="fas fa-hand-paper"></i> Analysis stopped';
+    }
+  }
+  
+  initBoard() {
+    const startFen = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
+    
+    this.drawPosition(startFen);
+  }
+  
+  drawPosition(fen) {
+    const svg = document.getElementById('board');
+    
+    const parts = fen.split(/[\[\]]/);
+    const boardPart = parts[0].trim().split(' ')[0];
+    const pocketPart = parts.length > 1 ? parts[1] : '';
+    
+    const ranks = boardPart.split('/');
+    const numRanks = ranks.length;
+    const numFiles = this.getBoardFiles(ranks);
+    
+    const boardPixels = 600;
+    const maxDim = Math.max(numRanks, numFiles);
+    const squareSize = boardPixels / maxDim;
+    
+    const existing = svg.querySelectorAll('.square, use, text');
+    existing.forEach(el => el.remove());
+    
+    const lightColor = '#ffce9e';
+    const darkColor = '#d18b47';
+    
+    const boardWidth = numFiles * squareSize;
+    const boardHeight = numRanks * squareSize;
+    const offsetX = (boardPixels - boardWidth) / 2;
+    const offsetY = (boardPixels - boardHeight) / 2;
+    
+    for (let rank = 0; rank < numRanks; rank++) {
+      const rankData = ranks[this.flipped ? numRanks - 1 - rank : rank];
+      let file = 0;
+      
+      for (let i = 0; i < rankData.length && file < numFiles; i++) {
+        const char = rankData[i];
+        
+        if (isNaN(char)) {
+          const displayFile = this.flipped ? numFiles - 1 - file : file;
+          const isLight = (rank + displayFile) % 2 === 0;
+          const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+          rect.setAttribute('class', 'square');
+          rect.setAttribute('fill', isLight ? lightColor : darkColor);
+          rect.setAttribute('width', squareSize);
+          rect.setAttribute('height', squareSize);
+          rect.setAttribute('x', offsetX + displayFile * squareSize);
+          rect.setAttribute('y', offsetY + rank * squareSize);
+          svg.appendChild(rect);
+          
+          const pieceId = PIECE_MAP[char];
+          if (pieceId) {
+            const use = document.createElementNS('http://www.w3.org/2000/svg', 'use');
+            use.setAttributeNS('http://www.w3.org/1999/xlink', 'href', '#' + pieceId);
+            const scale = squareSize / 45;
+            use.setAttribute('transform', 
+              `translate(${offsetX + displayFile * squareSize}, ${offsetY + rank * squareSize}) scale(${scale})`);
+            svg.appendChild(use);
+          }
+          file++;
+        } else {
+          const emptyCount = parseInt(char);
+          for (let j = 0; j < emptyCount && file < numFiles; j++) {
+            const displayFile = this.flipped ? numFiles - 1 - file : file;
+            const isLight = (rank + displayFile) % 2 === 0;
+            const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+            rect.setAttribute('class', 'square');
+            rect.setAttribute('fill', isLight ? lightColor : darkColor);
+            rect.setAttribute('width', squareSize);
+            rect.setAttribute('height', squareSize);
+            rect.setAttribute('x', offsetX + displayFile * squareSize);
+            rect.setAttribute('y', offsetY + rank * squareSize);
+            svg.appendChild(rect);
+            file++;
+          }
+        }
+      }
+    }
+    
+    for (let file = 0; file < numFiles; file++) {
+      const displayFile = this.flipped ? numFiles - 1 - file : file;
+      const letter = String.fromCharCode(97 + file);
+      
+      const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      text.setAttribute('x', offsetX + displayFile * squareSize + squareSize/2);
+      text.setAttribute('y', offsetY + numRanks * squareSize + 20);
+      text.setAttribute('text-anchor', 'middle');
+      text.setAttribute('font-size', '16');
+      text.setAttribute('fill', '#999');
+      text.textContent = letter;
+      svg.appendChild(text);
+    }
+    
+    for (let rank = 0; rank < numRanks; rank++) {
+      const displayRank = this.flipped ? rank : numRanks - 1 - rank;
+      const number = (displayRank + 1).toString();
+      
+      const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      text.setAttribute('x', offsetX - 15);
+      text.setAttribute('y', offsetY + rank * squareSize + squareSize/2 + 5);
+      text.setAttribute('text-anchor', 'end');
+      text.setAttribute('font-size', '16');
+      text.setAttribute('fill', '#999');
+      text.textContent = number;
+      svg.appendChild(text);
+    }
+    
+    const hasPockets = this.boardConfig.hasPockets || pocketPart;
+    const whitePocket = document.getElementById('whitePocket');
+    const blackPocket = document.getElementById('blackPocket');
+    
+    if (hasPockets) {
+      whitePocket.style.display = 'flex';
+      blackPocket.style.display = 'flex';
+      this.updatePockets(pocketPart || '');
+    } else {
+      whitePocket.style.display = 'none';
+      blackPocket.style.display = 'none';
+    }
+  }
+  
+  getBoardFiles(ranks) {
+    let maxFiles = 0;
+    for (const rank of ranks) {
+      let files = 0;
+      for (const char of rank) {
+        if (isNaN(char)) {
+          files++;
+        } else {
+          files += parseInt(char);
+        }
+      }
+      maxFiles = Math.max(maxFiles, files);
+    }
+    return maxFiles;
+  }
+  
+  updatePockets(pocketString) {
+    const whitePocket = document.getElementById('whitePocket');
+    const blackPocket = document.getElementById('blackPocket');
+    
+    whitePocket.innerHTML = '';
+    blackPocket.innerHTML = '';
+    
+    const pocketCounts = {};
+    if (pocketString) {
+      for (const char of pocketString) {
+        if (PIECE_MAP[char]) {
+          pocketCounts[char] = (pocketCounts[char] || 0) + 1;
+        }
+      }
+    }
+    
+    const pieceOrder = ['K', 'Q', 'R', 'B', 'N', 'P'];
+    
+    for (const basePiece of pieceOrder) {
+      const whitePiece = basePiece;
+      const whiteCount = pocketCounts[whitePiece] || 0;
+      
+      const whiteContainer = document.createElement('div');
+      whiteContainer.className = 'pocket-piece';
+      if (whiteCount === 0) {
+        whiteContainer.classList.add('empty');
+      }
+      
+      const whiteSvg = document.createElementNS(SVG_NS, 'svg');
+      whiteSvg.setAttribute('width', '50');
+      whiteSvg.setAttribute('height', '50');
+      whiteSvg.setAttribute('viewBox', '0 0 45 45');
+      
+      const whiteUse = document.createElementNS(SVG_NS, 'use');
+      whiteUse.setAttributeNS('http://www.w3.org/1999/xlink', 'href', '#' + PIECE_MAP[whitePiece]);
+      whiteSvg.appendChild(whiteUse);
+      whiteContainer.appendChild(whiteSvg);
+      
+      const whiteCountEl = document.createElement('div');
+      whiteCountEl.className = 'pocket-count';
+      whiteCountEl.textContent = whiteCount;
+      whiteContainer.appendChild(whiteCountEl);
+      
+      whitePocket.appendChild(whiteContainer);
+      
+      const blackPiece = basePiece.toLowerCase();
+      const blackCount = pocketCounts[blackPiece] || 0;
+      
+      const blackContainer = document.createElement('div');
+      blackContainer.className = 'pocket-piece';
+      if (blackCount === 0) {
+        blackContainer.classList.add('empty');
+      }
+      
+      const blackSvg = document.createElementNS(SVG_NS, 'svg');
+      blackSvg.setAttribute('width', '50');
+      blackSvg.setAttribute('height', '50');
+      blackSvg.setAttribute('viewBox', '0 0 45 45');
+      
+      const blackUse = document.createElementNS(SVG_NS, 'use');
+      blackUse.setAttributeNS('http://www.w3.org/1999/xlink', 'href', '#' + PIECE_MAP[blackPiece]);
+      blackSvg.appendChild(blackUse);
+      blackContainer.appendChild(blackSvg);
+      
+      const blackCountEl = document.createElement('div');
+      blackCountEl.className = 'pocket-count';
+      blackCountEl.textContent = blackCount;
+      blackContainer.appendChild(blackCountEl);
+      
+      blackPocket.appendChild(blackContainer);
+    }
+  }
+  
+  loadFile(file) {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const lines = e.target.result.trim().split('\n');
+      this.positions = {};
+      
+      console.log(`Loading ${lines.length} lines from ${file.name}...`);
+      
+      this.detectVariantFromFilename(file.name);
+      
+      for (const line of lines) {
+        if (line) {
+          const pos = JSON.parse(line);
+          this.positions[pos.id] = pos;
+        }
+      }
+      
+      console.log(`Loaded ${Object.keys(this.positions).length} positions`);
+      
+      if (this.positions[0]) {
+        const rootPos = this.positions[0];
+        console.log('Root position:', rootPos);
+        
+        this.currentId = 0;
+        this.history = [0];
+        this.displayPosition();
+      }
+    };
+    reader.readAsText(file);
+  }
+  
+  detectVariantFromFilename(filename) {
+    const name = filename.toLowerCase();
+    
+    if (name.includes('tinyhouse')) {
+      this.variant = 'tinyhouse';
+    } else if (name.includes('crazyhouse')) {
+      this.variant = 'crazyhouse';
+    } else if (name.includes('atomic')) {
+      this.variant = 'atomic';
+    } else if (name.includes('antichess')) {
+      this.variant = 'antichess';
+    } else if (name.includes('horde')) {
+      this.variant = 'horde';
+    } else if (name.includes('racingkings')) {
+      this.variant = 'racingkings';
+    } else if (name.includes('3check')) {
+      this.variant = '3check';
+    } else {
+      this.variant = 'standard';
+    }
+    
+    this.boardConfig = BOARD_CONFIGS[this.variant];
+    console.log(`Detected variant from filename: ${this.variant}`);
+    
+    // Update engine variant if ready
+    if (window.uciEngine && window.uciEngine.ready) {
+      window.uciEngine.setVariant(this.variant);
+    }
+  }
+  
+  displayPosition() {
+    if (!this.positions[this.currentId]) return;
+    
+    const pos = this.positions[this.currentId];
+    
+    console.log(`Displaying position ${this.currentId}:`, pos);
+    console.log(`- FEN: ${pos.fen}`);
+    console.log(`- Moves: ${pos.moves ? pos.moves.length : 0}`);
+    console.log(`- Evals: ${pos.evals ? pos.evals.length : 0}`);
+    console.log(`- Child IDs: ${pos.child_ids ? pos.child_ids.length : 0}`);
+    
+    this.drawPosition(pos.fen);
+    
+    document.getElementById('nodeId').textContent = pos.id;
+    document.getElementById('nodeVariant').textContent = this.variant.charAt(0).toUpperCase() + this.variant.slice(1);
+    document.getElementById('nodeFen').textContent = pos.fen;
+    
+    this.updateMovesList(pos);
+    
+    // Auto-analyze if enabled
+    if (this.autoAnalyze && window.uciEngine && window.uciEngine.ready) {
+      this.analyzePosition(pos.fen);
+    }
+  }
+  
+  updateMovesList(pos) {
+    const container = document.getElementById('movesList');
+    container.innerHTML = '';
+    
+    console.log('updateMovesList called with pos:', pos);
+    console.log('pos.moves:', pos.moves);
+    console.log('pos.evals:', pos.evals);
+    console.log('pos.child_ids:', pos.child_ids);
+    
+    if (!pos.moves || pos.moves.length === 0) {
+      console.log('No moves found - showing empty message');
+      container.innerHTML = '<div class="empty-message"><i class="fas fa-flag-checkered"></i><div>No moves from this position</div></div>';
+      return;
+    }
+    
+    console.log(`Found ${pos.moves.length} moves`);
+    
+    const moveData = pos.moves.map((move, i) => ({
+      move: move,
+      eval: pos.evals[i],
+      childId: pos.child_ids[i],
+      originalIdx: i
+    }));
+    
+    console.log('moveData:', moveData);
+    
+    moveData.sort((a, b) => b.eval - a.eval);
+    
+    const bestEval = moveData[0].eval;
+    
+    moveData.forEach(data => {
+      const row = document.createElement('div');
+      row.className = 'move-row';
+      
+      if (data.eval === bestEval) {
+        row.classList.add('best');
+      }
+      
+      if (data.childId < 0) {
+        row.classList.add('disabled');
+      }
+      
+      const moveCol = document.createElement('div');
+      moveCol.className = 'col-move';
+      moveCol.textContent = data.move;
+      
+      const scoreCol = document.createElement('div');
+      scoreCol.className = 'col-score';
+      const evalInt = data.eval !== undefined ? Math.round(data.eval) : null;
+      scoreCol.textContent = evalInt !== null ? evalInt.toString() : '-';
+      
+      const positionsCol = document.createElement('div');
+      positionsCol.className = 'col-positions';
+      positionsCol.textContent = data.childId < 0 ? data.childId : '';
+      
+      row.appendChild(moveCol);
+      row.appendChild(scoreCol);
+      row.appendChild(positionsCol);
+      
+      if (data.childId >= 0) {
+        row.addEventListener('click', () => this.makeMove(data.childId));
+      }
+      
+      container.appendChild(row);
+    });
+  }
+  
+  makeMove(targetId) {
+    if (this.positions[targetId]) {
+      this.currentId = targetId;
+      const currentIndex = this.history.indexOf(targetId);
+      
+      if (currentIndex !== -1) {
+        this.history = this.history.slice(0, currentIndex + 1);
+      } else {
+        this.history.push(targetId);
+      }
+      
+      this.displayPosition();
+    }
+  }
+  
+  bindEvents() {
+    document.getElementById('loadFile').addEventListener('click', () => {
+      document.getElementById('fileInput').click();
+    });
+    
+    document.getElementById('fileInput').addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        this.loadFile(file);
+      }
+    });
+    
+    document.getElementById('flipBoard').addEventListener('click', () => {
+      this.flipped = !this.flipped;
+      if (this.positions[this.currentId]) {
+        this.displayPosition();
+      } else {
+        this.initBoard();
+      }
+    });
+    
+    document.getElementById('btnStart').addEventListener('click', () => {
+      if (this.history.length > 0) {
+        this.currentId = this.history[0];
+        this.history = [this.currentId];
+        this.displayPosition();
+      }
+    });
+    
+    document.getElementById('btnBack').addEventListener('click', () => {
+      const currentIndex = this.history.indexOf(this.currentId);
+      if (currentIndex > 0) {
+        this.currentId = this.history[currentIndex - 1];
+        this.displayPosition();
+      }
+    });
+    
+    document.getElementById('btnForward').addEventListener('click', () => {
+      const currentIndex = this.history.indexOf(this.currentId);
+      if (currentIndex < this.history.length - 1) {
+        this.currentId = this.history[currentIndex + 1];
+        this.displayPosition();
+      }
+    });
+    
+    document.getElementById('btnEnd').addEventListener('click', () => {
+      if (this.history.length > 0) {
+        this.currentId = this.history[this.history.length - 1];
+        this.displayPosition();
+      }
+    });
+    
+    document.getElementById('reloadBtn').addEventListener('click', () => {
+      window.location.reload();
+    });
+    
+    // Analysis controls
+    document.getElementById('analyzeBtn').addEventListener('click', () => {
+      if (this.positions[this.currentId]) {
+        const pos = this.positions[this.currentId];
+        this.analyzePosition(pos.fen);
+      }
+    });
+    
+    document.getElementById('stopAnalysisBtn').addEventListener('click', () => {
+      this.stopAnalysis();
+    });
+    
+    document.getElementById('settingsBtn').addEventListener('click', () => {
+      this.showSettings();
+    });
+    
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowLeft') {
+        document.getElementById('btnBack').click();
+      } else if (e.key === 'ArrowRight') {
+        document.getElementById('btnForward').click();
+      } else if (e.key === 'Home') {
+        document.getElementById('btnStart').click();
+      } else if (e.key === 'End') {
+        document.getElementById('btnEnd').click();
+      } else if (e.key === 'a' || e.key === 'A') {
+        // Press 'A' to analyze
+        document.getElementById('analyzeBtn').click();
+      }
+    });
+  }
+  
+  showSettings() {
+    const depth = prompt('Analysis depth (1-30):', window.uciEngine ? window.uciEngine.depth : 15);
+    if (depth !== null) {
+      const d = parseInt(depth);
+      if (d >= 1 && d <= 30 && window.uciEngine) {
+        window.uciEngine.setDepth(d);
+        alert(`Depth set to ${d}`);
+      }
+    }
+    
+    const multiPV = prompt('Number of lines (1-5):', window.uciEngine ? window.uciEngine.multiPV : 3);
+    if (multiPV !== null) {
+      const pv = parseInt(multiPV);
+      if (pv >= 1 && pv <= 5 && window.uciEngine) {
+        window.uciEngine.setMultiPV(pv);
+        alert(`MultiPV set to ${pv}`);
+      }
+    }
+    
+    const auto = confirm('Enable auto-analyze on position change?');
+    this.autoAnalyze = auto;
+  }
+}
+
+// Make TreeViewer available globally
+window.TreeViewer = TreeViewer;
+
+// Initialize viewer immediately
+const viewer = new TreeViewer();
+window.viewer = viewer;
+console.log('TreeViewer initialized.');
+</script>
+
+<!-- Fairy-Stockfish Engine Integration -->
+<script type="module">
+console.log('🚀 Loading Fairy-Stockfish engine...');
+
+let Fsf14Web = null;
+
+async function initEngine() {
+  try {
+    // Try to load fsf14.js
+    const module = await import('./fsf14.js');
+    console.log('✓ fsf14.js loaded');
+    
+    // Initialize with config
+    Fsf14Web = await module.default({
+      print: (msg) => console.log('[FSF]', msg),
+      printErr: (msg) => console.error('[FSF]', msg),
+      locateFile: (file) => './' + file
+    });
+    
+    console.log('✓ Fairy-Stockfish initialized');
+    
+    // Create UCI interface
+    window.uciEngine = {
+      ready: false,
+      analyzing: false,
+      currentCallback: null,
+      depth: 15,
+      multiPV: 3,
+      variant: 'chess',
+      
+      setVariant(variant) {
+        const variantMap = {
+          'standard': 'chess',
+          'atomic': 'atomic',
+          'crazyhouse': 'crazyhouse',
+          'tinyhouse': 'crazyhouse',
+          'antichess': 'giveaway',
+          'horde': 'horde',
+          'racingkings': 'racingkings',
+          '3check': '3check'
+        };
+        
+        const uciVariant = variantMap[variant] || 'chess';
+        this.variant = uciVariant;
+        console.log(`Setting variant to ${uciVariant}`);
+        Fsf14Web.uci(`setoption name UCI_Variant value ${uciVariant}`);
+      },
+      
+      async analyzePosition(fen, moveTime = 5000) {
+        if (!this.ready) return null;
+        if (this.analyzing) return null;
+        
+        this.analyzing = true;
+        
+        return new Promise((resolve) => {
+          const results = { lines: [], depth: 0, totalNodes: 0 };
+          
+          this.currentCallback = (msg) => {
+            if (msg.startsWith('info') && msg.includes('pv')) {
+              const pvMatch = msg.match(/multipv (\d+)/);
+              const pvNum = pvMatch ? parseInt(pvMatch[1]) : 1;
+              
+              const depthMatch = msg.match(/depth (\d+)/);
+              const depth = depthMatch ? parseInt(depthMatch[1]) : 0;
+              
+              const scoreMatch = msg.match(/score (cp|mate) (-?\d+)/);
+              let score = null, scoreType = 'cp';
+              if (scoreMatch) {
+                scoreType = scoreMatch[1];
+                score = parseInt(scoreMatch[2]);
+              }
+              
+              const nodesMatch = msg.match(/nodes (\d+)/);
+              const nodes = nodesMatch ? parseInt(nodesMatch[1]) : 0;
+              
+              const pvMovesMatch = msg.match(/pv (.+)$/);
+              const pv = pvMovesMatch ? pvMovesMatch[1].trim().split(' ') : [];
+              
+              const idx = results.lines.findIndex(l => l.pvNum === pvNum);
+              const lineData = { pvNum, depth, score, scoreType, nodes, pv };
+              
+              if (idx >= 0) {
+                results.lines[idx] = lineData;
+              } else {
+                results.lines.push(lineData);
+              }
+              
+              results.depth = Math.max(results.depth, depth);
+              results.totalNodes = Math.max(results.totalNodes, nodes);
+            }
+            
+            if (msg.startsWith('bestmove')) {
+              this.currentCallback = null;
+              this.analyzing = false;
+              
+              results.lines.sort((a, b) => {
+                if (a.scoreType === 'mate' && b.scoreType === 'mate') {
+                  if (a.score > 0 && b.score > 0) return a.score - b.score;
+                  if (a.score < 0 && b.score < 0) return b.score - a.score;
+                  if (a.score > 0) return -1;
+                  if (b.score > 0) return 1;
+                }
+                if (a.scoreType === 'mate') return -1;
+                if (b.scoreType === 'mate') return 1;
+                return (b.score || 0) - (a.score || 0);
+              });
+              
+              resolve(results);
+            }
+          };
+          
+          Fsf14Web.uci('stop');
+          Fsf14Web.uci(`position fen ${fen}`);
+          Fsf14Web.uci(`go depth ${this.depth}`);
+        });
+      },
+      
+      stopAnalysis() {
+        if (this.analyzing) {
+          Fsf14Web.uci('stop');
+          this.analyzing = false;
+          this.currentCallback = null;
+        }
+      }
+    };
+    
+    // Set up message handler
+    Fsf14Web.listen = (msg) => {
+      if (window.uciEngine.currentCallback) {
+        window.uciEngine.currentCallback(msg);
+      }
+      
+      if (msg.includes('uciok')) {
+        console.log('✓ Engine ready');
+        Fsf14Web.uci(`setoption name MultiPV value ${window.uciEngine.multiPV}`);
+        window.uciEngine.ready = true;
+        
+        const statusEl = document.getElementById('analysisStatus');
+        if (statusEl) {
+          statusEl.innerHTML = '<i class="fas fa-check-circle"></i> Fairy-Stockfish ready - Press Analyze';
+        }
+        
+        if (window.viewer) {
+          window.viewer.onEngineReady();
+        }
+      }
+    };
+    
+    // Initialize UCI
+    Fsf14Web.uci('uci');
+    
+  } catch (error) {
+    console.error('❌ Failed to load Fairy-Stockfish:', error);
+    const statusEl = document.getElementById('analysisStatus');
+    if (statusEl) {
+      statusEl.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Engine failed to load';
+    }
+  }
+}
+
+// Start engine initialization
+initEngine();
+</script>
+
+</body>
+</html>
